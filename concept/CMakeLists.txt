@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Define project name
-project(hello)
+project(concept)
 
 include_directories(
         /usr/include/gstreamer-1.0 
