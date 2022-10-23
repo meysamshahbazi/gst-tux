@@ -23,7 +23,7 @@ main (int argc, char *argv[])
   bus = gst_element_get_bus (pipeline);
   msg =
       gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
-      GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+      (GstMessageType) (GST_MESSAGE_ERROR | GST_MESSAGE_EOS) );
 
   /* See next tutorial for proper error message handling/parsing */
   if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR) {
