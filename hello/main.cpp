@@ -13,7 +13,9 @@ main (int argc, char *argv[])
   /* Build the pipeline */
   pipeline =
       gst_parse_launch
-      ("playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm",
+      (
+        // "playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm",
+        "playbin uri=file:/home/meysam/Desktop/car1_s.mp4",
       NULL);
 
   /* Start playing */
@@ -26,7 +28,8 @@ main (int argc, char *argv[])
       (GstMessageType) (GST_MESSAGE_ERROR | GST_MESSAGE_EOS) );
 
   /* See next tutorial for proper error message handling/parsing */
-  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR) {
+  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR) 
+  {
     g_error ("An error occurred! Re-run with the GST_DEBUG=*:WARN environment "
         "variable set for more details.");
   }
