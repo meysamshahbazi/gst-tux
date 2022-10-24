@@ -13,7 +13,9 @@ typedef struct _CustomData
 } CustomData;
 
 // handler for the pad-added signal 
-static void pad_added_handler(GstElement *src,GstPad *pad, CustomData *data)
+static void pad_added_handler(GstElement *src,GstPad *pad, CustomData *data);
+
+
 int main(int argc, char * argv[])
 {  
     CustomData data;
@@ -45,7 +47,7 @@ int main(int argc, char * argv[])
     if(!gst_element_link_many(data.convert, data.resample, data.sink,NULL))
     {
         g_printerr("Element could not be linked.\n");
-        gst_buffer_unref(data.pipeline);
+        gst_object_unref(data.pipeline);
         return -1;
     }
 
@@ -114,4 +116,47 @@ int main(int argc, char * argv[])
     gst_object_unref (data.pipeline);
 
     return 0;
+}
+
+static void pad_added_handler(GstElement *src, GstPad *new_pad, CustomData *data)
+{
+    GstPad *sink_pad = gst_element_get_static_pad(data->convert,"sink");
+    GstPadLinkReturn ret;
+    GstCaps *new_pad_caps = NULL;
+    GstStructure *new_pad_struct = NULL;
+    const gchar *new_pad_type = NULL;
+
+    g_print("Recived new pad '%s' from '%s':\n",GST_PAD_NAME(new_pad),GST_ELEMENT_NAME(src));
+
+    if(gst_pad_is_linked(sink_pad))
+    {
+        g_print ("We are already linked. Ignoring.\n");
+        goto exit;
+    }
+    // check the new pads type
+
+    new_pad_caps = gst_pad_get_current_caps(new_pad);
+    new_pad_struct = gst_caps_get_structure(new_pad_caps, 0);
+    new_pad_type = gst_structure_get_name(new_pad_struct);
+
+    if(!g_str_has_prefix(new_pad_type, "audio/x-raw"))
+    {
+        g_print ("It has type '%s' which is not raw audio. Ignoring.\n", new_pad_type);
+        goto exit;
+    }
+
+    // attach the link
+    ret = gst_pad_link(new_pad,sink_pad);
+
+    if(GST_PAD_LINK_FAILED(ret))
+        g_print ("Type is '%s' but link failed.\n", new_pad_type);
+    else
+        g_print ("Link succeeded (type '%s').\n", new_pad_type);
+  
+
+exit:
+    if(new_pad_caps != NULL)
+        gst_caps_unref(new_pad_caps);
+
+    gst_object_unref(sink_pad);
 }
