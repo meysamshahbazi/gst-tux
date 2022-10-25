@@ -53,7 +53,7 @@ int main (int argc, char *argv[])
     // GstPadTemplate*		gst_pad_template_new			(const gchar *name_template,
 	// 							 GstPadDirection direction, GstPadPresence presence,
 	// 							 GstCaps *caps)
-
+    
     gtpa = gst_pad_template_new("tsrc_0",GST_PAD_SRC,GST_PAD_REQUEST,NULL);
     // GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,
 	// 						 const gchar * name, const GstCaps *caps);
@@ -89,7 +89,6 @@ int main (int argc, char *argv[])
 
     gst_object_unref(tee_audio_pad);
     gst_object_unref(tee_video_pad);
-
 
     if(msg)
         gst_message_unref(msg);
