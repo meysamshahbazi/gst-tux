@@ -50,14 +50,54 @@ int main (int argc, char *argv[])
     }
 
     GstPadTemplate *gtpa;
+    // GstPadTemplate*		gst_pad_template_new			(const gchar *name_template,
+	// 							 GstPadDirection direction, GstPadPresence presence,
+	// 							 GstCaps *caps)
+
+    gtpa = gst_pad_template_new("tsrc_0",GST_PAD_SRC,GST_PAD_REQUEST,NULL);
+    // GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,
+	// 						 const gchar * name, const GstCaps *caps);
     tee_audio_pad = gst_element_request_pad(tee,gtpa,"src_%u",NULL);
     g_print("Obtained request pad %s for audio branch.\n", gst_pad_get_name (tee_audio_pad));
-
+    queue_audio_pad = gst_element_get_static_pad(audio_queue, "sink");
     GstPadTemplate *gtpv;
+    gtpv = gst_pad_template_new("tsrc_1",GST_PAD_SRC,GST_PAD_REQUEST,NULL);
     tee_video_pad = gst_element_request_pad(tee,gtpv,"src_%u",NULL);
     g_print("Obtained request pad %s for video branch.\n", gst_pad_get_name (tee_video_pad));
+    queue_video_pad = gst_element_get_static_pad(video_queue, "sink");
+
+    if( gst_pad_link(tee_audio_pad, queue_audio_pad) != GST_PAD_LINK_OK ||
+        gst_pad_link(tee_video_pad, queue_video_pad) != GST_PAD_LINK_OK )
+    {
+        gst_printerr("Tee could not be linked");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+
+    gst_object_unref(queue_video_pad);
+    gst_object_unref(queue_audio_pad);
+
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+    bus = gst_element_get_bus(pipeline);
+
+    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+        (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+
+    gst_element_release_request_pad(tee, tee_audio_pad);
+    gst_element_release_request_pad(tee, tee_video_pad);
+
+    gst_object_unref(tee_audio_pad);
+    gst_object_unref(tee_video_pad);
 
 
+    if(msg)
+        gst_message_unref(msg);
+
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+
+    gst_object_unref(pipeline);
 
 
     return 0;
