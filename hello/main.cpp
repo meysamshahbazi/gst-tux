@@ -15,7 +15,7 @@ main (int argc, char *argv[])
     gst_parse_launch
     (
         // "playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm",
-        "playbin uri=file:/home/meysam/Desktop/car1_s.mp4",
+        "playbin uri=file:/home/meysam/Desktop/lesson1.mp4",
         NULL);
 
     /* Start playing */

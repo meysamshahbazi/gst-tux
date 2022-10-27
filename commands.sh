@@ -26,16 +26,43 @@ gst-launch-1.0   \
 
 # this works
 gst-launch-1.0   \
-    filesrc location=/home/meysam/Desktop/car1_s.mp4 ! \
+    filesrc location=/home/meysam/Desktop/test_1.mp4 ! \
     decodebin ! videoconvert ! \
-    videoscale ! video/x-raw,width=320,height=360 ! \
+    videoscale ! video/x-raw,width=640,height=360 ! \
     compositor name=mix \
     sink_0::alpha=1 sink_0::xpos=0  sink_0::ypos=0 sink_0::width=320  sink_0::height=360 \
-    sink_1::alpha=1 sink_0::xpos=640  sink_0::ypos=0 sink_0::width=320  sink_0::height=360 !   \
+    sink_1::alpha=1 sink_1::xpos=320  sink_1::ypos=0 sink_1::width=320  sink_1::height=360 !   \
     videoconvert ! autovideosink \
-    filesrc location=/home/meysam/Desktop/test.mp4 ! \
+    filesrc location=/home/meysam/Desktop/test_2.mp4 ! \
     decodebin ! videoconvert ! \
-    videoscale ! video/x-raw,width=320,height=360! \
+    videoscale ! video/x-raw,width=640,height=360! \
+    mix.
+
+
+gst-launch-1.0   \
+    filesrc location=/home/meysam/Desktop/test_1.mp4 ! \
+    decodebin ! videoconvert ! \
+    compositor name=mix \
+    sink_0::alpha=1 sink_0::xpos=0  sink_0::ypos=0 sink_0::width=320  sink_0::height=360 \
+    sink_1::alpha=1 sink_1::xpos=320  sink_1::ypos=0 sink_1::width=320  sink_1::height=360 !   \
+    videoconvert ! autovideosink \
+    filesrc location=/home/meysam/Desktop/test_2.mp4 ! \
+    decodebin ! videoconvert ! \
+    mix.
+
+
+
+gst-launch-1.0   \
+    filesrc location=/home/meysam/Desktop/test_1.mp4 ! \
+    decodebin ! videoconvert ! \
+    videoscale ! video/x-raw,width=640,height=360 ! \
+    compositor name=mix \
+    sink_0::alpha=1 sink_0::xpos=0  sink_0::ypos=0 sink_0::width=320  sink_0::height=360 \
+    sink_1::alpha=1 sink_1::xpos=320  sink_1::ypos=0 sink_1::width=320  sink_1::height=360 !   \
+    videoconvert ! autovideosink \
+    filesrc location=/home/meysam/Desktop/test_1.mp4 ! \
+    decodebin ! videoconvert ! \
+    videoscale ! video/x-raw,width=640,height=360! \
     mix.
 
 
@@ -78,3 +105,9 @@ gst-launch-1.0 -v -e videomixer name=mix  ! xvimagesink \
     filesrc location=/home/meysam/Desktop/car1_s.mp4 ! video/x-raw,framerate=5/1,width=320,height=180 ! videobox border-alpha=0 top=-180 left=0 ! mix. \
     filesrc location=/home/meysam/Desktop/car1_s.mp4 ! video/x-raw,framerate=5/1,width=320,height=180 ! videobox border-alpha=0 top=-180 left=-320 ! mix. \
      mix.
+
+gst-launch-1.0 filesrc location=Desktop/lesson1.mp4 !
+decodebin2 name=dec ! queue ! autovideosink
+dec. ! queue ! audioconvert ! audioresample ! autoaudiosink
+
+gst-launch-1.0 filesrc location=Desktop/lesson1.mp4 ! decodebin ! autovideosink
