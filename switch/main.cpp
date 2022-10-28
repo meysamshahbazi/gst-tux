@@ -1,11 +1,13 @@
 #include <gst/gst.h>
 #include <iostream>
+
+
 using namespace std;
 
 int
 main (int argc, char *argv[])
 {
-    GstElement *pipeline,*source1, *source2,*sink,*out_switch;;
+    GstElement *pipeline,*source1, *source2,*sink,*out_switch, *enc;
     GstBus *bus;
     GstMessage *msg;
     GstStateChangeReturn ret;
@@ -17,11 +19,18 @@ main (int argc, char *argv[])
         // create elements 
     source1 = gst_element_factory_make("videotestsrc", "source1");
     source2 = gst_element_factory_make("videotestsrc", "source2");
+
+    enc = gst_element_factory_make("x264enc", "enc");
+
+
     out_switch = gst_element_factory_make("input-selector", "out_switch");
     g_object_set(source1, "pattern", 14, NULL);
     g_object_set(source2, "pattern", 13, NULL);
 
-   sink = gst_element_factory_make("autovideosink", "sink");
+//    sink = gst_element_factory_make("autovideosink", "sink");
+    sink = gst_element_factory_make("filesink", "sink");
+    g_object_set(sink, "location","test.mp4",NULL);
+
 
     GstPadTemplate *padtemplate;
     GstPad *pad1 = NULL;
@@ -39,9 +48,9 @@ main (int argc, char *argv[])
 
     pipeline = gst_pipeline_new("test-pipline");
     // build the pipe 
-    gst_bin_add_many(GST_BIN (pipeline),source1,source2,out_switch,sink,NULL);
+    gst_bin_add_many(GST_BIN (pipeline),source1,source2,out_switch,enc,sink,NULL);
 
-    if (gst_element_link(out_switch,sink) != TRUE)
+    if (gst_element_link_many(out_switch,enc,sink,NULL) != TRUE)
     {
         g_printerr("Elements could not be linked.\n");
         gst_object_unref(pipeline);
@@ -118,7 +127,6 @@ main (int argc, char *argv[])
             cout<<"A\n";
             g_object_set(out_switch,"active-pad",pad1,NULL);
             cout<<"insert mode(a,b): ";
-
         }
         if(inp=='b')
         {
@@ -127,17 +135,8 @@ main (int argc, char *argv[])
             cout<<"insert mode(a,b): ";
         }
 
-
-
     }
     
-   
-
-    
-
-
-
-
 
     /* Free resources */
     gst_message_unref (msg);
