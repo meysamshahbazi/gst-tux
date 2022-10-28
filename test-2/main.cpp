@@ -90,7 +90,7 @@ static void print_pad_templates_information (GstElementFactory * factory)
 
 int main(int argc, char** argv)
 {
-    GstElement *pipline, *source1, *source2, *compositor,*sink;
+    GstElement *pipline, *source1, *source2, *compositor,*sink,*out_switch;
     GstBus *bus;
     GstMessage *msg;
     GstStateChangeReturn ret;
@@ -101,8 +101,14 @@ int main(int argc, char** argv)
     // create elements 
     source1 = gst_element_factory_make("videotestsrc", "source1");
     source2 = gst_element_factory_make("videotestsrc", "source2");
+    out_switch = gst_element_factory_make("input-selector", "out_switch");
+    // source1 = gst_element_factory_make ("uridecodebin", "source1");
+    // source2 = gst_element_factory_make ("uridecodebin", "source2");
     g_object_set(source1, "pattern", 14, NULL);
     g_object_set(source2, "pattern", 13, NULL);
+    // g_object_set(source1,"uri","/home/meysam/Desktop/lesson1.mp4", NULL);
+    // g_object_set(source2,"uri","/home/meysam/Desktop/lesson2.mp4", NULL);
+    
     sink = gst_element_factory_make("autovideosink", "sink");
 
 
