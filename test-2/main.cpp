@@ -1,6 +1,7 @@
 #include <gst/gst.h>
 #include <iostream>
 #include <stdio.h>
+using namespace std;
 
 static gboolean print_field(GQuark field, const GValue *value, gpointer pfx)
 {
@@ -104,8 +105,8 @@ int main(int argc, char** argv)
     out_switch = gst_element_factory_make("input-selector", "out_switch");
     // source1 = gst_element_factory_make ("uridecodebin", "source1");
     // source2 = gst_element_factory_make ("uridecodebin", "source2");
-    g_object_set(source1, "pattern", 14, NULL);
-    g_object_set(source2, "pattern", 13, NULL);
+    g_object_set(source1, "pattern", 18, NULL);
+    g_object_set(source2, "pattern", 7, NULL);
     // g_object_set(source1,"uri","/home/meysam/Desktop/lesson1.mp4", NULL);
     // g_object_set(source2,"uri","/home/meysam/Desktop/lesson2.mp4", NULL);
     
@@ -132,8 +133,7 @@ int main(int argc, char** argv)
     g_object_set(pad1,"alpha",1.0f,"xpos",0,"ypos",0,"width",320,"height",480,NULL);
     g_object_set(pad2,"alpha",1.0f,"xpos",320,"ypos",0,"width",320,"height",480,NULL);
 
-    // g_object_set(pad1,"alpha",1.0f,"xpos",0,"ypos",0,"width",640,"height",480,NULL);
-    // g_object_set(pad2,"alpha",0.0f,"xpos",320,"ypos",0,"width",320,"height",480,NULL);
+   
 
 
     // return -1;
@@ -143,14 +143,6 @@ int main(int argc, char** argv)
     // build the pipe 
     gst_bin_add_many(GST_BIN (pipline),source1,source2,compositor,sink,NULL);
 
-    // print_pad_templates_information(comp_factory);
-    // return -1;
-
-
-
-
-    // build the pipe 
-    // gst_bin_add_many(GST_BIN (pipline),source1,sink,NULL);
     if (gst_element_link(compositor,sink) != TRUE)
     {
         g_printerr("Elements could not be linked.\n");
@@ -173,11 +165,7 @@ int main(int argc, char** argv)
     gst_object_unref(src_pad1);
     gst_object_unref(src_pad2);
 
-
-
-
     // start playing
-
     ret = gst_element_set_state(pipline,GST_STATE_PLAYING);
 
     if(ret == GST_STATE_CHANGE_FAILURE)
@@ -187,41 +175,71 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    // wait until error or EOS
-    bus = gst_element_get_bus(pipline);
-    msg = gst_bus_timed_pop_filtered(bus,GST_CLOCK_TIME_NONE,
-                    (GstMessageType) (GST_MESSAGE_ERROR | GST_MESSAGE_EOS) );
+
 
     
 
-    /* Parse message */
-    if (msg != NULL) 
+
+
+    cout<<"insert mode(a,b,c): ";
+    char inp;
+
+
+    while (true)
     {
-        GError *err;
-        gchar *debug_info;
+        // wait until error or EOS
+        bus = gst_element_get_bus(pipline);
+        msg = gst_bus_timed_pop_filtered(bus,10*GST_MSECOND,
+                        (GstMessageType) (GST_MESSAGE_ERROR | GST_MESSAGE_EOS | GST_MESSAGE_DURATION) );
 
-        switch (GST_MESSAGE_TYPE (msg)) 
+        
+        /* Parse message */
+        if (msg != NULL) 
         {
-            case GST_MESSAGE_ERROR:
-            gst_message_parse_error (msg, &err, &debug_info);
-            g_printerr ("Error received from element %s: %s\n",
-                GST_OBJECT_NAME (msg->src), err->message);
-            g_printerr ("Debugging information: %s\n",
-                debug_info ? debug_info : "none");
-            g_clear_error (&err);
-            g_free (debug_info);
-            break;
-            case GST_MESSAGE_EOS:
-            g_print ("End-Of-Stream reached.\n");
-            break;
-            default:
-            /* We should not reach here because we only asked for ERRORs and EOS */
-            g_printerr ("Unexpected message received.\n");
-            break;
-        }
-        gst_message_unref (msg);
-    }
+            GError *err;
+            gchar *debug_info;
 
+            switch (GST_MESSAGE_TYPE (msg)) 
+            {
+                case GST_MESSAGE_ERROR:
+                gst_message_parse_error (msg, &err, &debug_info);
+                g_printerr ("Error received from element %s: %s\n",
+                    GST_OBJECT_NAME (msg->src), err->message);
+                g_printerr ("Debugging information: %s\n",
+                    debug_info ? debug_info : "none");
+                g_clear_error (&err);
+                g_free (debug_info);
+                break;
+                case GST_MESSAGE_EOS:
+                g_print ("End-Of-Stream reached.\n");
+                break;
+                default:
+                /* We should not reach here because we only asked for ERRORs and EOS */
+                g_printerr ("Unexpected message received.\n");
+                break;
+            }
+            gst_message_unref (msg);
+        }
+        cin>>inp;
+        if(inp =='a')
+        {
+            g_object_set(pad1,"alpha",1.0f,"xpos",0,"ypos",0,"width",640,"height",480,NULL);
+            g_object_set(pad2,"alpha",0.0f,"xpos",0,"ypos",0,"width",640,"height",480,NULL);
+            cout<<"insert mode(a,b): ";
+        }
+        if(inp=='b')
+        {
+            g_object_set(pad1,"alpha",0.0f,"xpos",0,"ypos",0,"width",640,"height",480,NULL);
+            g_object_set(pad2,"alpha",1.0f,"xpos",0,"ypos",0,"width",640,"height",480,NULL);
+            cout<<"insert mode(a,b): ";
+        }
+        if(inp == 'c')
+        {
+            g_object_set(pad1,"alpha",1.0f,"xpos",0,"ypos",0,"width",320,"height",480,NULL);
+            g_object_set(pad2,"alpha",1.0f,"xpos",320,"ypos",0,"width",320,"height",480,NULL);
+            cout<<"insert mode(a,b): ";
+        }
+    }
 
     /* Free resources */
     gst_object_unref (bus);

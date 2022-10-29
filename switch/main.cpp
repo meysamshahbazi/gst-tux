@@ -19,17 +19,17 @@ main (int argc, char *argv[])
         // create elements 
     source1 = gst_element_factory_make("videotestsrc", "source1");
     source2 = gst_element_factory_make("videotestsrc", "source2");
-
-    enc = gst_element_factory_make("x264enc", "enc");
+    
+    // enc = gst_element_factory_make("x264enc", "enc");
 
 
     out_switch = gst_element_factory_make("input-selector", "out_switch");
     g_object_set(source1, "pattern", 14, NULL);
     g_object_set(source2, "pattern", 13, NULL);
 
-//    sink = gst_element_factory_make("autovideosink", "sink");
-    sink = gst_element_factory_make("filesink", "sink");
-    g_object_set(sink, "location","test.mp4",NULL);
+   sink = gst_element_factory_make("autovideosink", "sink");
+    // sink = gst_element_factory_make("filesink", "sink");
+    // g_object_set(sink, "location","lesson1.mp4",NULL);
 
 
     GstPadTemplate *padtemplate;
@@ -48,9 +48,9 @@ main (int argc, char *argv[])
 
     pipeline = gst_pipeline_new("test-pipline");
     // build the pipe 
-    gst_bin_add_many(GST_BIN (pipeline),source1,source2,out_switch,enc,sink,NULL);
+    gst_bin_add_many(GST_BIN (pipeline),source1,source2,out_switch,sink,NULL);
 
-    if (gst_element_link_many(out_switch,enc,sink,NULL) != TRUE)
+    if (gst_element_link_many(out_switch,sink,NULL) != TRUE)
     {
         g_printerr("Elements could not be linked.\n");
         gst_object_unref(pipeline);
