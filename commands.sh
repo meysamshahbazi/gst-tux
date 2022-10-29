@@ -78,3 +78,7 @@ gst-launch-1.0 -v -e videomixer name=mix  ! xvimagesink \
     filesrc location=/home/meysam/Desktop/car1_s.mp4 ! video/x-raw,framerate=5/1,width=320,height=180 ! videobox border-alpha=0 top=-180 left=0 ! mix. \
     filesrc location=/home/meysam/Desktop/car1_s.mp4 ! video/x-raw,framerate=5/1,width=320,height=180 ! videobox border-alpha=0 top=-180 left=-320 ! mix. \
      mix.
+
+
+ gst-launch-1.0 filesrc location=/home/meysam/Desktop/car1_s.mp4 ! \
+ decodebin ! videoconvert ! autovideoosink
