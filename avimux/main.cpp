@@ -3,20 +3,21 @@
 int
 main (int argc, char *argv[])
 {
-    GstElement *pipeline;
+    GstElement *pipeline, *source1,*sink;
     GstBus *bus;
     GstMessage *msg;
 
     /* Initialize GStreamer */
     gst_init (&argc, &argv);
 
+    source1 = gst_element_factory_make("videotestsrc", "source1");
+    g_object_set(source1, "pattern", 14, NULL);
+    sink = gst_element_factory_make("filesink", "sink");
+
+
+
+
     /* Build the pipeline */
-    pipeline =
-    gst_parse_launch
-    (
-        // "playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm",
-        "playbin uri=file:/home/meysam/Desktop/lesson1.mp4",
-        NULL);
 
     /* Start playing */
     gst_element_set_state (pipeline, GST_STATE_PLAYING);
