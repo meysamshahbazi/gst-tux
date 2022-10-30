@@ -42,6 +42,7 @@ int main(int argc, char * argv[])
 
     // Build the pipeline. Note that we are NOT linking the source at this
     // point. We will do it later.
+
     gst_bin_add_many(GST_BIN(data.pipeline), data.source, data.convert, data.resample, data.sink,NULL);
 
     if(!gst_element_link_many(data.convert, data.resample, data.sink,NULL))
@@ -55,7 +56,7 @@ int main(int argc, char * argv[])
     // g_object_set (data.source, "uri", "https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm", NULL);
     g_object_set (data.source, "uri", "file:/home/meysam/Desktop/lesson1.mp4", NULL);
 
-    g_signal_connect(data.source, "pad-added",G_CALLBACK(pad_added_handler), &data);
+    g_signal_connect(data.source, "pad-added" ,G_CALLBACK(pad_added_handler), &data);
 
     ret = gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
 

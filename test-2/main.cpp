@@ -106,7 +106,7 @@ int main(int argc, char** argv)
     // source1 = gst_element_factory_make ("uridecodebin", "source1");
     // source2 = gst_element_factory_make ("uridecodebin", "source2");
     g_object_set(source1, "pattern", 18, NULL);
-    g_object_set(source2, "pattern", 7, NULL);
+    g_object_set(source2, "pattern", 0, NULL);
     // g_object_set(source1,"uri","/home/meysam/Desktop/lesson1.mp4", NULL);
     // g_object_set(source2,"uri","/home/meysam/Desktop/lesson2.mp4", NULL);
     
