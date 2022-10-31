@@ -25,8 +25,7 @@ int main (int argc, char *argv[])
     // gst-launch-1.0 filesrc location=/home/meysam/Desktop/car1_s.mp4 ! decodebin ! autovideosink
 
     gst_init (&argc, &argv);
-
-
+    
     data.src = gst_element_factory_make("filesrc", "source");
     data.dec = gst_element_factory_make("decodebin","dec");
     data.sink = gst_element_factory_make("autovideosink", "sink");
