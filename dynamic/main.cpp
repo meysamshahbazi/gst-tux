@@ -162,3 +162,4 @@ exit:
 
     gst_object_unref(sink_pad);
 }
+
