@@ -80,5 +80,9 @@ gst-launch-1.0 -v -e videomixer name=mix  ! xvimagesink \
      mix.
 
 
- gst-launch-1.0 filesrc location=/home/meysam/Desktop/car1_s.mp4 ! \
+gst-launch-1.0 filesrc location=/home/meysam/Desktop/car1_s.mp4 ! \
  decodebin ! videoconvert ! autovideosink
+
+
+gst-launch-1.0 v4l2src device=/dev/video1 ! 'video/x-raw,format=UYVY' ! nvvidconv ! 'video/x-raw(memory:NVMM),format=NV12' ! nvoverlaysink
+
