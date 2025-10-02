@@ -206,6 +206,9 @@ gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM),fo
 
 
 
+gst-launch-1.0 v4l2src device=/dev/video2  ! 'video/x-raw,width=736,height=288, format=UYVY,framerate=50/1' ! nvvidconv ! 'video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12' ! nvoverlaysink sync=false 
+
+
 $ gst-launch-1.0 nvarguscamerasrc ! "video/x-raw(memory:NVMM),format=NV12,width=640,height=480,framerate=30/1" 
 ! nvvidconv ! "video/x-raw(memory:NVMM),format=RGBA" ! queue 
 ! nvcompositor name=comp sink_0::width=640 sink_0::height=480 sink_0::xpos=0 sink_0::ypos=0 sink_1::width=640 sink_1::height=480 sink_1::xpos=640 sink_1::ypos=0 ! 
@@ -233,12 +236,16 @@ fpsdisplaysink text-overlay=0 video-sink=autovideosink
 
 gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM), format=NV12' ! nv3dsink -e
 
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=960, height=1080, format=NV12' ! nv3dsink -e
 
 
 sudo systemctl stop gdm
 export DISPLAY=:0
 sudo loginctl terminate-seat seat0
 sudo jetson_clocks
+
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink conn-id=1 plane-id=0 -e
 
 
 
@@ -258,3 +265,47 @@ gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), f
 
 
 gst-launch-1.0 -v videotestsrc ! textoverlay text="Room A" valignment=top halignment=left font-desc="Sans, 72" ! autovideosink
+
+
+
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1 
+
+
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=960, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1 offset-x=960 sync=false && gst-launch-1.0 nvv4l2camerasrc device=/dev/video1 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=960, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1 sync=false
+
+
+
+# save to file FHD
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! \
+nvvidconv ! 'video /x-raw(memory:NVMM), width=(int)1920, height=(int)1080, \
+format=(string)NV12, framerate=(fraction)30/1' ! nvv4l2h265enc \
+bitrate=8000000 ! h265parse ! qtmux ! filesink \
+location="filename_h265.mp4" -e
+
+
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video1 ! 'video/x-raw(memory:NVMM), format=UYVY, width=736, height=288, interlace-mode=progressive, framerate=50/1' ! \
+nvvidconv ! 'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)NV12 ' ! nvv4l2h265enc \
+bitrate=8000000 ! h265parse ! qtmux ! filesink \
+location="filename_h265.mp4" -e
+
+
+# show camera
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=738, height=288, interlace-mode=progressive, framerate=50/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1 
+
+gst-launch-1.0 v4l2src device="/dev/video1" ! "video/x-raw,width=736,height=288, format=(string)UYVY, framerate=50/1" ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1
+
+
+
+gst-launch-1.0 v4l2src device="/dev/video1 ! "video/x-raw,width=1920,height=1080, format=(string)UYVY" ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1
+
+gst-launch-1.0 v4l2src device="/dev/video1" ! "video/x-raw,width=1920,height=1080, format=(string)UYVY, framerate=30/1" ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1
+
+
+gst-launch-1.0 v4l2src device="/dev/video1" ! "video/x-raw,width=1920,height=1080, format=(string)UYVY, framerate=30/1" ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink  plane-id=1
+
+
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM), format=UYVY, width=1920, height=1080, interlace-mode=progressive, framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM),width=1920, height=1080, format=NV12' ! nvdrmvideosink conn-id=1 plane-id=0 -e

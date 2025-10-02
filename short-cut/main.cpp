@@ -23,6 +23,7 @@ typedef struct _CustomData {
  * The idle handler is added to the mainloop when appsrc requests us to start sending data (need-data signal)
  * and is removed when appsrc has enough data (enough-data signal).
  */
+
 static gboolean push_data (CustomData *data) {
   GstBuffer *buffer;
   GstFlowReturn ret;
