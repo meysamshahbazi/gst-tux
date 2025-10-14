@@ -69,25 +69,64 @@ struct CustomData {
 };
 
 
+static gboolean push_data(CustomData *data) {
+    GstBuffer *buffer;
+    GstFlowReturn ret;
+    int i;
+    GstMapInfo map;
+    //   gint num_samples = CHUNK_SIZE / 2; /* Because each sample is 16 bits */
+
+    /* Create a new empty buffer */
+    buffer = gst_buffer_new_and_alloc (data->size);
+    // buffer = gst_buffer_make_writable (buffer);
+    /* Set its timestamp and duration */
+    //   GST_BUFFER_TIMESTAMP (buffer) = gst_util_uint64_scale (data->num_samples, GST_SECOND, SAMPLE_RATE);
+    //   GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale (num_samples, GST_SECOND, SAMPLE_RATE);
+
+    /* Generate some psychodelic waveforms */
+    gst_buffer_map (buffer, &map, GST_MAP_WRITE);
+    guint8 *raw = (guint8 *)map.data;
+    for (int i =0; i <data->size; i++) {
+        raw[i] = data->ptr[i];
+    }
+    gst_buffer_unmap (buffer, &map);
+    /* Push the buffer into the appsrc */
+    g_signal_emit_by_name (data->appsrc, "push-buffer", buffer, &ret);
+
+    /* Free the buffer now that we are done with it */
+    gst_buffer_unref (buffer);
+
+    if (ret != GST_FLOW_OK) {
+        /* We got some error, stop sending data */
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
 /* The appsink has received a buffer */
 static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     GstSample *sample;
     GstFlowReturn ret;
+    GstMapInfo map;
+    guint8 *ptr;
     /* Retrieve the buffer */
-    std::cout << "im here in new sample\n";
+    // std::cout << "im here in new sample\n";
     g_signal_emit_by_name (sink, "pull-sample", &sample);
     if (sample) {
         GstBuffer* rec_buff = gst_sample_get_buffer(sample);
-
-
-
-        // /* The only thing we do in this example is print a * to indicate a received buffer */
-        // g_print ("*");
-
-        g_signal_emit_by_name (data->appsrc, "push-buffer", rec_buff, &ret);
-        // push_data(data);
-        // gst_buffer_unref(rec_buff);
-
+        gst_buffer_map (rec_buff, &map, GST_MAP_READ);
+        data->size = map.size;
+        guint8 *raw = (guint8 *)map.data;
+        for (int i =0; i <data->size; i++) {
+            data->ptr[i] = raw[i];
+        }
+        // // std::cout << "im hree\n";
+        gst_buffer_unmap (rec_buff, &map);
+        
+        push_data(data);
+        
         gst_sample_unref (sample);
         return GST_FLOW_OK;
     }
@@ -96,50 +135,13 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
 }
 
 
-static gboolean push_data(CustomData *data) {
-  GstBuffer *buffer;
-  GstFlowReturn ret;
-  int i;
-  GstMapInfo map;
-  gint16 *raw;
-//   gint num_samples = CHUNK_SIZE / 2; /* Because each sample is 16 bits */
-
-  /* Create a new empty buffer */
-  buffer = gst_buffer_new_and_alloc (data->size);
-
-  /* Set its timestamp and duration */
-//   GST_BUFFER_TIMESTAMP (buffer) = gst_util_uint64_scale (data->num_samples, GST_SECOND, SAMPLE_RATE);
-//   GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale (num_samples, GST_SECOND, SAMPLE_RATE);
-
-  /* Generate some psychodelic waveforms */
-  gst_buffer_map (buffer, &map, GST_MAP_WRITE);
-  raw = (gint16 *)map.data;
-
-
-
-
-
-  /* Push the buffer into the appsrc */
-  g_signal_emit_by_name (data->appsrc, "push-buffer", buffer, &ret);
-
-  /* Free the buffer now that we are done with it */
-  gst_buffer_unref (buffer);
-
-  if (ret != GST_FLOW_OK) {
-    /* We got some error, stop sending data */
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
 /* This signal callback triggers when appsrc needs data. Here, we add an idle handler
  * to the mainloop to start pushing data into the appsrc */
 static void start_feed (GstElement *source, guint size, CustomData *data) {
-  if (data->sourceid == 0) {
-    g_print ("Start feeding\n");
-    data->sourceid = g_idle_add ((GSourceFunc) push_data, data);
-  }
+    if (data->sourceid == 0) {
+        g_print ("Start feeding\n");
+        data->sourceid = g_idle_add ((GSourceFunc) push_data, data);
+    }
 }
 
 /* This callback triggers when appsrc has enough data and we can stop sending.
@@ -173,24 +175,39 @@ gint main (gint   argc, gchar *argv[]) {
     gst_init (&argc, &argv);
     loop = g_main_loop_new (NULL, FALSE);
 
+    data.ptr = new guint8[1920*1080*4];
+
     /* build */
     pipeline1 = gst_pipeline_new ("my-pipeline1");
     pipeline2 = gst_pipeline_new ("my-pipeline2");
 
     udpsrc = gst_element_factory_make ("udpsrc", "udp_src");
+    if (udpsrc == NULL)
+        g_error ("Could not create 'udpsrc' element");
 
     data.appsrc = gst_element_factory_make ("appsrc", "app_src");
+    if (data.appsrc == NULL)
+        g_error ("Could not create 'data.appsrc' element");
+
     data.appsink = gst_element_factory_make ("appsink", "app_sink");
+    if (data.appsink == NULL)
+        g_error ("Could not create 'data.appsink' element");
 
     capsfilter = gst_element_factory_make ("capsfilter", "caps_filter");
     g_assert (capsfilter != NULL); /* should always exist */
 
     queue = gst_element_factory_make ("queue", "queue0");
+    if (queue == NULL)
+        g_error ("Could not create 'queue' element");
     rtph264depay = gst_element_factory_make ("rtph264depay", "rtph264_depay");
+    if (udpsrc == NULL)
+        g_error ("Could not create 'udpsrc' element");
     h264parse = gst_element_factory_make ("h264parse", "h264_parse");
+    if (udpsrc == NULL)
+        g_error ("Could not create 'udpsrc' element");
     
 
-    nvh264dec = gst_element_factory_make ("avdec_h264", "nvh264_dec");
+    nvh264dec = gst_element_factory_make ("nvh264dec", "nvh264_dec");
     if (nvh264dec == NULL)
         g_error ("Could not create 'nvh264dec' element");
 
@@ -204,14 +221,14 @@ gint main (gint   argc, gchar *argv[]) {
 
 
     gst_bin_add_many (GST_BIN (pipeline1), udpsrc, capsfilter, queue, 
-        rtph264depay,h264parse, data.appsink, NULL);
+        rtph264depay, data.appsink, NULL);
 
-    gst_bin_add_many (GST_BIN (pipeline2),data.appsrc,
+    gst_bin_add_many (GST_BIN (pipeline2),data.appsrc,h264parse,
         nvh264dec,videoconvert,autovideosink, NULL);
 
-    gst_element_link_many(udpsrc, capsfilter, queue, rtph264depay, h264parse, data.appsink, NULL);
+    gst_element_link_many(udpsrc, capsfilter, rtph264depay,data.appsink, NULL);
 
-    gst_element_link_many(data.appsrc, nvh264dec,videoconvert,autovideosink, NULL);
+    gst_element_link_many(data.appsrc,h264parse, nvh264dec,videoconvert,autovideosink, NULL);
 
 
 
@@ -241,7 +258,7 @@ gint main (gint   argc, gchar *argv[]) {
     g_object_set(G_OBJECT (autovideosink), "sync", FALSE, NULL);
 
 
-    g_object_set (data.appsrc, "caps", caps,  "format", GST_FORMAT_TIME, NULL);
+    // g_object_set (data.appsrc, "caps", caps,  "format", GST_FORMAT_TIME, NULL);
     g_signal_connect (data.appsrc, "need-data", G_CALLBACK (start_feed), &data);
     g_signal_connect (data.appsrc, "enough-data", G_CALLBACK (stop_feed), &data);
 
@@ -284,6 +301,8 @@ gint main (gint   argc, gchar *argv[]) {
 
     gst_element_set_state (pipeline2, GST_STATE_NULL);
     gst_object_unref (pipeline2);
+
+    delete data.ptr;
 
     return 0;
 }
