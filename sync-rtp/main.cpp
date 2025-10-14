@@ -117,14 +117,43 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     if (sample) {
         GstBuffer* rec_buff = gst_sample_get_buffer(sample);
         gst_buffer_map (rec_buff, &map, GST_MAP_READ);
-        data->size = map.size;
+
+        int index = 7;
+
+        data->size = map.size - index ;
         guint8 *raw = (guint8 *)map.data;
-        for (int i =0; i <data->size; i++) {
+        // std::cout << data->size << "\t";
+
+         for (int i = 0; i < index; i++) {
             data->ptr[i] = raw[i];
         }
-        // // std::cout << "im hree\n";
-        gst_buffer_unmap (rec_buff, &map);
+
+        // raw[4] = 10;
+        // raw[5] = 11;
+        // raw[6] = 12;
+        // raw[7] = 13;
         
+        // for (int j = 0; j < index; j++)
+        //     std::cout << int(raw[index+j]) << ", ";
+
+        // std::cout << std::endl;
+
+        for (int i = index; i < data->size ; i++) {
+            data->ptr[i] = raw[i+index];
+        }
+
+        // for (int i =0; i <20; i++) {       
+        //     std::cout << int(raw[i]) << " ,";
+        // }
+        // std::cout << std::endl;
+
+        // for (int i =0; i <20; i++) {       
+        //     std::cout << int(data->ptr[i]) << " ,";
+        // }
+        // std::cout << std::endl;
+
+        gst_buffer_unmap (rec_buff, &map);
+
         push_data(data);
         
         gst_sample_unref (sample);
@@ -258,7 +287,7 @@ gint main (gint   argc, gchar *argv[]) {
     g_object_set(G_OBJECT (autovideosink), "sync", FALSE, NULL);
 
 
-    // g_object_set (data.appsrc, "caps", caps,  "format", GST_FORMAT_TIME, NULL);
+    g_object_set (data.appsrc, "caps", caps,  "format", GST_FORMAT_TIME, NULL);
     g_signal_connect (data.appsrc, "need-data", G_CALLBACK (start_feed), &data);
     g_signal_connect (data.appsrc, "enough-data", G_CALLBACK (stop_feed), &data);
 
