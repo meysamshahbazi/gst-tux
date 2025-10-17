@@ -117,44 +117,73 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     if (sample) {
         GstBuffer* rec_buff = gst_sample_get_buffer(sample);
         gst_buffer_map (rec_buff, &map, GST_MAP_READ);
-
-        int index = 7;
-
-        data->size = map.size - index ;
+        GstClockTime pts = GST_BUFFER_PTS(rec_buff);
+        
+        int start_index = 6;
+        int len = 0;
+    
+        uint8_t embed_data[len];
+        data->size = map.size - len ;
         guint8 *raw = (guint8 *)map.data;
-        // std::cout << data->size << "\t";
+       
+        
 
-         for (int i = 0; i < index; i++) {
+         for (int i = 0; i < map.size ; i++) {
             data->ptr[i] = raw[i];
         }
 
-        // raw[4] = 10;
-        // raw[5] = 11;
-        // raw[6] = 12;
-        // raw[7] = 13;
-        
-        // for (int j = 0; j < index; j++)
-        //     std::cout << int(raw[index+j]) << ", ";
-
-        // std::cout << std::endl;
-
-        for (int i = index; i < data->size ; i++) {
-            data->ptr[i] = raw[i+index];
+/* 
+        for (int i = 0; i < start_index ; i++) {
+            data->ptr[i] = raw[i];
         }
 
-        // for (int i =0; i <20; i++) {       
-        //     std::cout << int(raw[i]) << " ,";
+        
+        for (int j = start_index; j < start_index+len ; j++)
+            embed_data[j-start_index] = raw[j];
+
+        for (int i = start_index + len; i < map.size ; i++) {
+            data->ptr[i-len] = raw[i];
+        }
+ */
+
+        // for (int i =0; i <len; i++) {       
+        //     std::cout << int(embed_data[i]) << " ,";
         // }
         // std::cout << std::endl;
 
-        // for (int i =0; i <20; i++) {       
-        //     std::cout << int(data->ptr[i]) << " ,";
-        // }
-        // std::cout << std::endl;
+        int header = 0;
 
+        
+        int nb_nal = 0;
+        for (int i =0; i <data->size-3; i++) {   
+            if (data->ptr[i]   == 0x00 &&
+                data->ptr[i+1] == 0x00 &&
+                data->ptr[i+2] == 0x00 &&
+                data->ptr[i+3] == 0x01 )  {
+                    nb_nal++; 
+                    header = raw[i+4];
+                } 
+            
+        }
+        if (header == 6) {
+            std::cout << data->size << "\t";
+             for (int i =0; i <data->size; i++) {       
+                std::cout << int(data->ptr[i]) << " ,";
+            }
+            std::cout << std::endl;
+        }
+        
+        // if (data->size < 20 ){
+            //     for (int i =0; i <data->size; i++) {       
+                //         std::cout << int(data->ptr[i]) << " ,";
+                //     }
+                //     std::cout << std::endl;
+                // }
+                
         gst_buffer_unmap (rec_buff, &map);
-
-        push_data(data);
+        
+        if (header != 6)
+            push_data(data);
         
         gst_sample_unref (sample);
         return GST_FLOW_OK;
@@ -197,7 +226,7 @@ gint main (gint   argc, gchar *argv[]) {
     
 
     CustomData data;
-    GstCaps *filtercaps, *caps;
+    GstCaps *x_rtp_caps, *x_h264_caps;
     GstPad *pad;
 
     /* init GStreamer */
@@ -249,19 +278,31 @@ gint main (gint   argc, gchar *argv[]) {
         g_error ("Could not create neither 'xvimagesink' nor 'ximagesink' element");
 
 
-    gst_bin_add_many (GST_BIN (pipeline1), udpsrc, capsfilter, queue, 
-        rtph264depay, data.appsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline1), udpsrc,
+        capsfilter,
+        rtph264depay,
+        data.appsink, NULL);
 
-    gst_bin_add_many (GST_BIN (pipeline2),data.appsrc,h264parse,
+    gst_element_link_many(udpsrc, 
+        capsfilter,
+        rtph264depay, 
+        data.appsink, NULL);
+
+
+
+    gst_bin_add_many (GST_BIN (pipeline2),data.appsrc, 
+    // rtph264depay, 
+    h264parse,
+    nvh264dec,videoconvert,autovideosink, NULL);
+
+    gst_element_link_many(data.appsrc,
+        // rtph264depay,
+        h264parse, 
         nvh264dec,videoconvert,autovideosink, NULL);
 
-    gst_element_link_many(udpsrc, capsfilter, rtph264depay,data.appsink, NULL);
-
-    gst_element_link_many(data.appsrc,h264parse, nvh264dec,videoconvert,autovideosink, NULL);
 
 
-
-    filtercaps = gst_caps_new_simple ("application/x-rtp",
+    x_rtp_caps = gst_caps_new_simple ("application/x-rtp",
                 "media", G_TYPE_STRING, "video",
                 "clock-rate", G_TYPE_INT, 90000,
                 "encoding-name", G_TYPE_STRING, "H264",
@@ -270,33 +311,39 @@ gint main (gint   argc, gchar *argv[]) {
 
 
                 
-    g_object_set (G_OBJECT (capsfilter), "caps", filtercaps, NULL);
+
+    g_object_set (G_OBJECT (capsfilter), "caps", x_rtp_caps, NULL);
 
 
-
-    caps = gst_caps_new_simple("video/x-h264",
-                    "stream-format", G_TYPE_STRING, "byte-stream",
-                    "alignment", G_TYPE_STRING, "au",
-                    NULL);
     
     
-    gst_caps_unref(filtercaps);
+    
+    gst_caps_unref(x_rtp_caps);
     
     g_object_set(G_OBJECT (udpsrc), "uri", "udp://224.1.1.3:5000", NULL);
-    g_object_set(G_OBJECT (queue), "max-size-buffers", 1, NULL);
+    // g_object_set(G_OBJECT (queue), "max-size-buffers", 1, NULL);
     g_object_set(G_OBJECT (autovideosink), "sync", FALSE, NULL);
 
+    x_h264_caps = gst_caps_new_simple("video/x-h264",
+                    "stream-format", G_TYPE_STRING, "byte-stream",
+                    "alignment", G_TYPE_STRING, "nal",
+                    NULL);
 
-    g_object_set (data.appsrc, "caps", caps,  "format", GST_FORMAT_TIME, NULL);
+    g_object_set (data.appsrc,
+         "caps", x_h264_caps, 
+          "format", GST_FORMAT_TIME, NULL);
     g_signal_connect (data.appsrc, "need-data", G_CALLBACK (start_feed), &data);
     g_signal_connect (data.appsrc, "enough-data", G_CALLBACK (stop_feed), &data);
 
     
-    /* Configure appsink */
-    g_object_set (data.appsink, "emit-signals", TRUE, "caps", caps, NULL);
+    /* Configure appsrc */
+    g_object_set (data.appsink, "emit-signals", TRUE,
+         "caps", x_h264_caps, 
+         NULL);
+
     g_signal_connect (data.appsink, "new-sample", G_CALLBACK (new_sample), &data);
 
-    gst_caps_unref(caps);
+    gst_caps_unref(x_h264_caps);
 
 
 
