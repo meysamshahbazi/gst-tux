@@ -1,63 +1,5 @@
 #include <gst/gst.h>
 #include <iostream>
-// #include "gst/video/gstvideometa.h"
-// #include "my_frame_id_meta.h" 
-
-// #include "gstmyfilter.h"
-
-#define CUSTOM_UUID_LEN 16
-
-// static GstPadProbeReturn cb_have_data(GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
-//     gint x, y;
-//     GstMapInfo map;
-//     GstMapInfo map2;
-//     guint8 *ptr;
-//     guint16 *ptr2;
-//     GstBuffer *buffer;
-//     GstBuffer *buffer2;
-
-//     GstElement *rtph264depay = (GstElement *)user_data;
-
-
-//     buffer = GST_PAD_PROBE_INFO_BUFFER (info);
-//     buffer = gst_buffer_make_writable (buffer);
-
-//     /* Making a buffer writable can fail (for example if it
-//     * cannot be copied and is used more than once)
-//     */
-//      if (buffer == NULL)
-//         return GST_PAD_PROBE_OK;
-
-//     /* Mapping a buffer can fail (non-writable) */
-//     if (gst_buffer_map (buffer, &map, GST_MAP_WRITE)) {
-        
-//         ptr = (guint8 *) map.data;
-//         for (int i =0; i < 20; i++)
-//             std::cout << int(ptr[i]) << ",";
-        
-//         std::cout<< std::endl;
-
-//         // for (int i = 5; i < map.size-1; i++) {
-//         //     ptr[i] = ptr[i+1];
-//         // }
-
-//         for (int i =0; i < 20; i++)
-//             std::cout << int(ptr[i]) << ",";
-
-//         std::cout << "\ts: " << map.size << std::endl;
-//         // for (int i = 0; i < map.size - 1; i++)
-//         //     ptr[i] = ptr[i];
-
-//         // map.size = map.size - 1;
-//         gst_buffer_unmap (buffer, &map);
-//     }
-//     // std::cout << "im heree \n";
-
-//     GST_PAD_PROBE_INFO_DATA(info) = buffer;
-
-
-//     return GST_PAD_PROBE_OK;
-// }
 
 struct CustomData {
     guint8* ptr;
@@ -68,20 +10,14 @@ struct CustomData {
 
 };
 
-
 static gboolean push_data(CustomData *data) {
     GstBuffer *buffer;
     GstFlowReturn ret;
     int i;
     GstMapInfo map;
-    //   gint num_samples = CHUNK_SIZE / 2; /* Because each sample is 16 bits */
 
     /* Create a new empty buffer */
     buffer = gst_buffer_new_and_alloc (data->size);
-    // buffer = gst_buffer_make_writable (buffer);
-    /* Set its timestamp and duration */
-    //   GST_BUFFER_TIMESTAMP (buffer) = gst_util_uint64_scale (data->num_samples, GST_SECOND, SAMPLE_RATE);
-    //   GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale (num_samples, GST_SECOND, SAMPLE_RATE);
 
     /* Generate some psychodelic waveforms */
     gst_buffer_map (buffer, &map, GST_MAP_WRITE);
@@ -104,7 +40,6 @@ static gboolean push_data(CustomData *data) {
     return TRUE;
 }
 
-
 /* The appsink has received a buffer */
 static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     GstSample *sample;
@@ -112,7 +47,6 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     GstMapInfo map;
     guint8 *ptr;
     /* Retrieve the buffer */
-    // std::cout << "im here in new sample\n";
     g_signal_emit_by_name (sink, "pull-sample", &sample);
     if (sample) {
         GstBuffer* rec_buff = gst_sample_get_buffer(sample);
@@ -126,34 +60,14 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
         data->size = map.size - len ;
         guint8 *raw = (guint8 *)map.data;
        
-        
-
-         for (int i = 0; i < map.size ; i++) {
+        for (int i = 0; i < map.size ; i++) {
             data->ptr[i] = raw[i];
         }
 
-/* 
-        for (int i = 0; i < start_index ; i++) {
-            data->ptr[i] = raw[i];
-        }
 
-        
-        for (int j = start_index; j < start_index+len ; j++)
-            embed_data[j-start_index] = raw[j];
-
-        for (int i = start_index + len; i < map.size ; i++) {
-            data->ptr[i-len] = raw[i];
-        }
- */
-
-        // for (int i =0; i <len; i++) {       
-        //     std::cout << int(embed_data[i]) << " ,";
-        // }
-        // std::cout << std::endl;
 
         int header = 0;
 
-        
         int nb_nal = 0;
         for (int i =0; i <data->size-3; i++) {   
             if (data->ptr[i]   == 0x00 &&
@@ -162,9 +76,9 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
                 data->ptr[i+3] == 0x01 )  {
                     nb_nal++; 
                     header = raw[i+4];
-                } 
-            
+                }
         }
+
         if (header == 6) {
             std::cout << data->size << "\t";
              for (int i =0; i <data->size; i++) {       
@@ -172,16 +86,8 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
             }
             std::cout << std::endl;
         }
-        
-        // if (data->size < 20 ){
-            //     for (int i =0; i <data->size; i++) {       
-                //         std::cout << int(data->ptr[i]) << " ,";
-                //     }
-                //     std::cout << std::endl;
-                // }
-                
+
         gst_buffer_unmap (rec_buff, &map);
-        
         if (header != 6)
             push_data(data);
         
@@ -211,8 +117,6 @@ static void stop_feed (GstElement *source, CustomData *data) {
     data->sourceid = 0;
   }
 }
-
-
 
 gint main (gint   argc, gchar *argv[]) {
     GMainLoop *loop;
@@ -290,13 +194,10 @@ gint main (gint   argc, gchar *argv[]) {
 
 
 
-    gst_bin_add_many (GST_BIN (pipeline2),data.appsrc, 
-    // rtph264depay, 
-    h264parse,
+    gst_bin_add_many (GST_BIN (pipeline2), data.appsrc, h264parse,
     nvh264dec,videoconvert,autovideosink, NULL);
 
     gst_element_link_many(data.appsrc,
-        // rtph264depay,
         h264parse, 
         nvh264dec,videoconvert,autovideosink, NULL);
 
@@ -308,16 +209,9 @@ gint main (gint   argc, gchar *argv[]) {
                 "encoding-name", G_TYPE_STRING, "H264",
                 "payload", G_TYPE_INT, 96,
                 NULL);
-
-
-                
-
+    
     g_object_set (G_OBJECT (capsfilter), "caps", x_rtp_caps, NULL);
 
-
-    
-    
-    
     gst_caps_unref(x_rtp_caps);
     
     g_object_set(G_OBJECT (udpsrc), "uri", "udp://224.1.1.3:5000", NULL);
@@ -344,20 +238,6 @@ gint main (gint   argc, gchar *argv[]) {
     g_signal_connect (data.appsink, "new-sample", G_CALLBACK (new_sample), &data);
 
     gst_caps_unref(x_h264_caps);
-
-
-
-
-
-    // pad = gst_element_get_static_pad (udpsrc, "src");
-    // gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BUFFER,
-    //     (GstPadProbeCallback) cb_have_data, NULL, NULL);
-    // gst_object_unref (pad);
-
-    // pad = gst_element_get_static_pad (rtph264depay, "src");
-    // gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BUFFER,
-    //     (GstPadProbeCallback) cb_have_data, (gpointer)rtph264depay, NULL);
-    // gst_object_unref (pad);
 
     /* run */
     gst_element_set_state (pipeline1, GST_STATE_PLAYING);
