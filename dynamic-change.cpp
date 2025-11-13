@@ -1,5 +1,7 @@
 #include <gst/gst.h>
 
+
+
 static gchar *opt_effects = NULL;
 
 #define DEFAULT_EFFECTS "identity,exclusion,navigationtest," \
