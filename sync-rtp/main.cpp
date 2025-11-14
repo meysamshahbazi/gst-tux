@@ -51,20 +51,14 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
     if (sample) {
         GstBuffer* rec_buff = gst_sample_get_buffer(sample);
         gst_buffer_map (rec_buff, &map, GST_MAP_READ);
-        GstClockTime pts = GST_BUFFER_PTS(rec_buff);
-        
-        int start_index = 6;
-        int len = 0;
-    
-        uint8_t embed_data[len];
-        data->size = map.size - len ;
+        // GstClockTime pts = GST_BUFFER_PTS(rec_buff);
+
+        data->size = map.size;
         guint8 *raw = (guint8 *)map.data;
        
         for (int i = 0; i < map.size ; i++) {
             data->ptr[i] = raw[i];
         }
-
-
 
         int header = 0;
 
@@ -131,6 +125,7 @@ gint main (gint   argc, gchar *argv[]) {
     
 
     CustomData data;
+    data.sourceid = -1;
     GstCaps *x_rtp_caps, *x_h264_caps;
     GstPad *pad;
 
@@ -242,14 +237,17 @@ gint main (gint   argc, gchar *argv[]) {
     gst_caps_unref(x_h264_caps);
 
     /* run */
-    gst_element_set_state (pipeline1, GST_STATE_PLAYING);
     gst_element_set_state (pipeline2, GST_STATE_PLAYING);
+    gst_element_set_state (pipeline1, GST_STATE_PLAYING);
 
     /* wait until it's up and running or failed */
     if (gst_element_get_state (pipeline1, NULL, NULL, -1) == GST_STATE_CHANGE_FAILURE) {
         g_error ("Failed to go into PLAYING state");
     }
-
+    if (gst_element_get_state (pipeline2, NULL, NULL, -1) == GST_STATE_CHANGE_FAILURE) {
+        g_error ("Failed to go into PLAYING state");
+    }
+    
     g_print ("Running ...\n");
     g_main_loop_run (loop);
 
