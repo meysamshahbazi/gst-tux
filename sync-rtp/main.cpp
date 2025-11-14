@@ -1,5 +1,16 @@
 #include <gst/gst.h>
 #include <iostream>
+#include <vector>
+
+#include <stdio.h>
+#include <strings.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include<netinet/in.h>
+#define PORT 5002
+#define MAXLINE 1000
+
 
 struct CustomData {
     guint8* ptr;
@@ -74,13 +85,13 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
                 }
         }
 
-        if (header == 6) {
-            std::cout << data->size << "\t";
-             for (int i =0; i <data->size; i++) {       
-                std::cout << int(data->ptr[i]) << " ,";
-            }
-            std::cout << std::endl;
-        }
+        // if (header == 6) {
+        //     std::cout << data->size << "\t";
+        //      for (int i =0; i <data->size; i++) {       
+        //         std::cout << int(data->ptr[i]) << " ,";
+        //     }
+        //     std::cout << std::endl;
+        // }
 
         gst_buffer_unmap (rec_buff, &map);
         if (header != 6)
@@ -114,6 +125,25 @@ static void stop_feed (GstElement *source, CustomData *data) {
 }
 
 gint main (gint   argc, gchar *argv[]) {
+
+    unsigned char buffer[100];
+    int listenfd;
+    socklen_t len;
+    struct sockaddr_in servaddr, cliaddr;
+    bzero(&servaddr, sizeof(servaddr));
+
+    // Create a UDP Socket
+    listenfd = socket(AF_INET, SOCK_DGRAM, 0);        
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(PORT);
+    servaddr.sin_family = AF_INET; 
+ 
+    // bind server address to socket descriptor
+    bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
+     
+    
+
+
     GMainLoop *loop;
     GstElement*udpsrc, *capsfilter, *queue, 
     // *appsink, *appsrc,
@@ -249,7 +279,43 @@ gint main (gint   argc, gchar *argv[]) {
     }
     
     g_print ("Running ...\n");
-    g_main_loop_run (loop);
+    // g_main_loop_run (loop);
+
+    uint32_t frame_cnt;
+
+    uint16_t x_car, y_car, w_car, h_car;
+    uint16_t x_plt, y_plt, w_plt, h_plt;
+    std::vector<char> plate_digit;
+
+    while (1) {
+        plate_digit.clear();
+        //receive the datagram
+        len = sizeof(cliaddr);
+        
+        int n = recvfrom(listenfd, buffer, 28,
+                0, (struct sockaddr*)&cliaddr,&len); //receive message from server
+
+        frame_cnt = (buffer[0]<<24) + (buffer[1]<<16) + (buffer[2]<<8) + buffer[3];
+        x_car = (buffer[4]<<8) + buffer[5];
+        y_car = (buffer[6]<<8) + buffer[7];
+        w_car = (buffer[8]<<8) + buffer[9];
+        h_car = (buffer[10]<<8) + buffer[11];
+
+        x_plt = (buffer[12]<<8) + buffer[13];
+        y_plt = (buffer[14]<<8) + buffer[15];
+        w_plt = (buffer[16]<<8) + buffer[17];
+        h_plt = (buffer[18]<<8) + buffer[19];
+
+        // buffer[n] = '\0';
+        std::cout << "UDP: ";
+        for (int i = 20; i < 28; i++){
+            plate_digit.push_back(char(buffer[i]));
+            std::cout << char(buffer[i]) << ", ";
+        }
+        std::cout << std::endl;
+        
+    }
+    
 
     /* exit */
     gst_element_set_state (pipeline1, GST_STATE_NULL);
