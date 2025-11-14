@@ -75,7 +75,8 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
                 data->ptr[i+2] == 0x00 &&
                 data->ptr[i+3] == 0x01 )  {
                     nb_nal++; 
-                    header = raw[i+4];
+                    if (i+4 < data->size-3)
+                        header = raw[i+4];
                 }
         }
 
@@ -214,7 +215,8 @@ gint main (gint   argc, gchar *argv[]) {
 
     gst_caps_unref(x_rtp_caps);
     
-    g_object_set(G_OBJECT (udpsrc), "uri", "udp://224.1.1.3:5000", NULL);
+    // g_object_set(G_OBJECT (udpsrc), "uri", "udp://224.1.1.3:5000", NULL);
+    g_object_set(G_OBJECT (udpsrc), "port", 5000, NULL);
     // g_object_set(G_OBJECT (queue), "max-size-buffers", 1, NULL);
     g_object_set(G_OBJECT (autovideosink), "sync", FALSE, NULL);
 
