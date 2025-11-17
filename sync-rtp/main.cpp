@@ -7,9 +7,13 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include<netinet/in.h>
+#include <netinet/in.h>
 #define PORT 5002
 #define MAXLINE 1000
+
+#include <chrono>
+
+std::chrono::_V2::system_clock::time_point t_perv;
 
 
 struct CustomData {
@@ -20,6 +24,8 @@ struct CustomData {
     guint sourceid;
 
 };
+
+uint32_t last_frame_cnt;
 
 static gboolean push_data(CustomData *data) {
     GstBuffer *buffer;
@@ -85,18 +91,32 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
                 }
         }
 
-        // if (header == 6) {
-        //     std::cout << data->size << "\t";
-        //      for (int i =0; i <data->size; i++) {       
-        //         std::cout << int(data->ptr[i]) << " ,";
-        //     }
-        //     std::cout << std::endl;
-        // }
+
+        if (header == 6) {
+            uint32_t frame_cnt = (raw[7]<<24) + (raw[9]<<16) + (raw[11]<<8) +raw[13];
+
+            // std::cout << frame_cnt << std::endl;
+            if (frame_cnt - last_frame_cnt != 1)
+                std::cout <<  frame_cnt << " " << last_frame_cnt <<  "EEEEEEEEEEEEEEEEEEEEEEEEEEE\n";
+               
+            last_frame_cnt = frame_cnt;
+            // std::cout << data->size << "\t";
+            //  for (int i =0; i <data->size; i++) {       
+            //     std::cout << int(data->ptr[i]) << " ,";
+            // }
+            // std::cout << std::endl;
+        }
 
         gst_buffer_unmap (rec_buff, &map);
-        if (header != 6)
+        if (header != 6){
+            
+            // std::cout << header << "\t|" ;
+            // auto t_now = std::chrono::system_clock::now();
+            // auto micro = std::chrono::duration_cast<std::chrono::microseconds>(t_now -t_perv).count();
+            // t_perv = t_now;
+            // std::cout << "du: " << micro/1000.0f << std::endl;
             push_data(data);
-        
+        }
         gst_sample_unref (sample);
         return GST_FLOW_OK;
     }
@@ -147,7 +167,7 @@ gint main (gint   argc, gchar *argv[]) {
     GMainLoop *loop;
     GstElement*udpsrc, *capsfilter, *queue, 
     // *appsink, *appsrc,
-    *rtph264depay,*h264parse,
+    *rtph264depay,*h264parse,*fpsdisplaysink,
     *nvh264dec,*videoconvert,*autovideosink;
 
     GstElement *pipeline1;
@@ -155,12 +175,13 @@ gint main (gint   argc, gchar *argv[]) {
     
 
     CustomData data;
-    data.sourceid = -1;
+    data.sourceid = 0;
     GstCaps *x_rtp_caps, *x_h264_caps;
     GstPad *pad;
 
     /* init GStreamer */
     gst_init (&argc, &argv);
+
     loop = g_main_loop_new (NULL, FALSE);
 
     data.ptr = new guint8[1920*1080*4];
@@ -203,6 +224,11 @@ gint main (gint   argc, gchar *argv[]) {
     if (videoconvert == NULL)
         g_error ("Could not create 'videoconvert' element");
 
+    // fpsdisplaysink = gst_element_factory_make ("fpsdisplaysink", "sink");
+    // if (fpsdisplaysink == NULL) 
+    //     g_error ("Could not create neither 'fpsdisplaysink' element");
+
+    
     autovideosink = gst_element_factory_make ("autovideosink", "sink");
     if (autovideosink == NULL) 
         g_error ("Could not create neither 'xvimagesink' nor 'ximagesink' element");
@@ -218,16 +244,18 @@ gint main (gint   argc, gchar *argv[]) {
         rtph264depay, 
         data.appsink, NULL);
 
-
-
     gst_bin_add_many (GST_BIN (pipeline2), data.appsrc, h264parse,
-    nvh264dec,videoconvert,autovideosink, NULL);
+    nvh264dec,videoconvert
+    // ,fpsdisplaysink
+    ,autovideosink
+    , NULL);
 
     gst_element_link_many(data.appsrc,
         h264parse, 
-        nvh264dec,videoconvert,autovideosink, NULL);
-
-
+        nvh264dec,videoconvert
+        // ,fpsdisplaysink
+        ,autovideosink
+        , NULL);
 
     x_rtp_caps = gst_caps_new_simple ("application/x-rtp",
                 "media", G_TYPE_STRING, "video",
@@ -242,8 +270,12 @@ gint main (gint   argc, gchar *argv[]) {
     
     // g_object_set(G_OBJECT (udpsrc), "uri", "udp://224.1.1.3:5000", NULL);
     g_object_set(G_OBJECT (udpsrc), "port", 5000, NULL);
-    // g_object_set(G_OBJECT (queue), "max-size-buffers", 1, NULL);
+    g_object_set(G_OBJECT (queue), "max-size-buffers", 1, NULL);
     g_object_set(G_OBJECT (autovideosink), "sync", FALSE, NULL);
+
+    // g_object_set(G_OBJECT (fpsdisplaysink),
+    // "video-sink", autovideosink,
+    //  "text-overlay", FALSE, "sync", FALSE, NULL);
 
     x_h264_caps = gst_caps_new_simple("video/x-h264",
                     "stream-format", G_TYPE_STRING, "byte-stream",
@@ -263,11 +295,14 @@ gint main (gint   argc, gchar *argv[]) {
          NULL);
 
     g_signal_connect (data.appsink, "new-sample", G_CALLBACK (new_sample), &data);
-
+    
     gst_caps_unref(x_h264_caps);
 
     /* run */
     gst_element_set_state (pipeline2, GST_STATE_PLAYING);
+    while (data.sourceid == 0) {
+        sleep(1);
+    }
     gst_element_set_state (pipeline1, GST_STATE_PLAYING);
 
     /* wait until it's up and running or failed */
@@ -306,17 +341,17 @@ gint main (gint   argc, gchar *argv[]) {
         w_plt = (buffer[16]<<8) + buffer[17];
         h_plt = (buffer[18]<<8) + buffer[19];
 
-        // buffer[n] = '\0';
-        std::cout << "UDP: ";
-        for (int i = 20; i < 28; i++){
-            plate_digit.push_back(char(buffer[i]));
-            std::cout << char(buffer[i]) << ", ";
-        }
-        std::cout << std::endl;
+        // std::cout << "UDP: " << frame_cnt << std::endl;
+        // if (char(buffer[20]) != ' ') {
+        //     for (int i = 20; i < 28; i++){
+        //         plate_digit.push_back(char(buffer[i]));
+        //         std::cout << char(buffer[i]) << ", ";
+        //     }
+        //     std::cout << std::endl;
+        // }
         
     }
     
-
     /* exit */
     gst_element_set_state (pipeline1, GST_STATE_NULL);
     gst_object_unref (pipeline1);
