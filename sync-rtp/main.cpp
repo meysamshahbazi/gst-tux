@@ -97,7 +97,7 @@ static GstFlowReturn new_sample (GstElement *sink, CustomData *data) {
 
             // std::cout << frame_cnt << std::endl;
             if (frame_cnt - last_frame_cnt != 1)
-                std::cout <<  frame_cnt << " " << last_frame_cnt <<  "EEEEEEEEEEEEEEEEEEEEEEEEEEE\n";
+                std::cout <<  frame_cnt << " " << last_frame_cnt <<  " EEEEEEEEEEEEEEEEEEEEEEEEEEE\n";
                
             last_frame_cnt = frame_cnt;
             // std::cout << data->size << "\t";
@@ -216,7 +216,7 @@ gint main (gint   argc, gchar *argv[]) {
         g_error ("Could not create 'udpsrc' element");
     
 
-    nvh264dec = gst_element_factory_make ("nvh264dec", "nvh264_dec");
+    nvh264dec = gst_element_factory_make ("openh264dec", "nvh264_dec");
     if (nvh264dec == NULL)
         g_error ("Could not create 'nvh264dec' element");
 
